@@ -1,3 +1,4 @@
+import argparse
 import math
 from typing import Callable, Set, Tuple
 
@@ -76,29 +77,43 @@ r = 2.0 / math.pi
 
 hammersley = Solution(
     2.0 + 2.0 * r,
-    lambda t: r * (math.cos(2.0*t) - 1.0),
-    lambda t: r * math.sin(2.0*t),
+    lambda t: r * (math.cos(2.0 * t) - 1.0),
+    lambda t: r * math.sin(2.0 * t),
 )
 
-def choose_solution() -> tuple[Solution, str]:
-    while True:
-        print("Choose solution to run:")
-        print("1. Semi-circle")
-        print("2. Hammersley")
-        try:
-            choice = int(input("Enter 1 or 2: ").strip())
-        except ValueError:
-            print("Invalid choice. Please enter 1 or 2.")
-            continue
-        if choice == 1:
-            return semi_circle, "semi_circle"
-        elif choice == 2:
-            return hammersley, "hammersley"
-        else:
-            print("Invalid choice. Please enter 1 or 2.")
+SOLUTIONS: dict[str, Solution] = {
+    "semi_circle": semi_circle,
+    "hammersley": hammersley,
+}
+
+
+def choose_solution(name: str) -> tuple[Solution, str]:
+    try:
+        return SOLUTIONS[name], name
+    except KeyError as exc:
+        options = ", ".join(sorted(SOLUTIONS))
+        raise ValueError(f"Unknown solution '{name}'. Available options: {options}") from exc
+
 
 if __name__ == "__main__":
-    solution, name = choose_solution()
+    parser = argparse.ArgumentParser(description="Run a moving sofa solution")
+    parser.add_argument(
+        "solution",
+        choices=sorted(SOLUTIONS),
+        help="which solution to run",
+    )
+    parser.add_argument(
+        "--render",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="render the result (use --no-render to skip)",
+    )
+    args = parser.parse_args()
+
+    solution, name = choose_solution(args.solution)
     area, carved, px, rows, cols = RunSolution(solution, n_cols=600, dteta=0.05)
-    print(f"{name.capitalize()} sofa area ≈ {area:.6f}  [dx={solution.width/cols:.6f}]")
-    RenderRemaining(px, rows, cols, carved, show=True, save_path=None)
+    print(
+        f"{name.replace('_', ' ').capitalize()} sofa area ≈ {area:.6f}  [dx={solution.width/cols:.6f}]"
+    )
+    RenderRemaining(px, rows, cols, carved, show=args.render, save_path=None)
+
